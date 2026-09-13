@@ -1,0 +1,7 @@
+# Private SSH key(s) for the EC2 server - never commit these.
+keys/
+
+# Furlong-Backend and Furlong-Frontend are their own separate git repos
+# cloned side-by-side here, not part of this one.
+Furlong-Backend/
+Furlong-Frontend/
