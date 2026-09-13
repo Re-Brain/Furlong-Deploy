@@ -1,0 +1,73 @@
+services:
+  db:
+    container_name: horse-postgres
+    image: postgres:16
+    env_file:
+      - ./Furlong-Backend/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    env_file:
+      - ./Furlong-Backend/.env
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  redis:
+    container_name: horse-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    container_name: horse-backend
+    build:
+      context: ./Furlong-Backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./Furlong-Backend/.env
+    # .env points DATABASE_URL/REDIS_URL at localhost (for running the backend
+    # directly on the host). Inside this network they must point at the
+    # service names instead, so rebuild those two vars at container start
+    # from the POSTGRES_* values env_file already loaded - no duplication.
+    command: >
+      sh -c "export DATABASE_URL=postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@db:5432/$$POSTGRES_DB &&
+      export REDIS_URL=redis://redis:6379/0 &&
+      exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./Furlong-Backend:/app
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    container_name: horse-frontend
+    build:
+      context: ./Furlong-Frontend
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./Furlong-Frontend/.env
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./Furlong-Frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  redis_data:
