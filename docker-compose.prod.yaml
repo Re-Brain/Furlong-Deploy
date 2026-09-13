@@ -1,0 +1,60 @@
+services:
+  db:
+    container_name: horse-postgres
+    image: postgres:16
+    env_file:
+      - ./Furlong-Backend/.env
+    # Not published to the host - only the backend container should reach
+    # Postgres, never the public internet.
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    container_name: horse-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  backend:
+    container_name: horse-backend
+    build:
+      context: ./Furlong-Backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./Furlong-Backend/.env
+    # Same reasoning as the dev compose file: rebuild DATABASE_URL/REDIS_URL
+    # at container start from the POSTGRES_* values env_file already loaded,
+    # pointed at the service names instead of .env's localhost default.
+    # No --reload and no source bind-mount here - this image is immutable;
+    # deploying a code change means rebuilding the image, not live-editing.
+    command: >
+      sh -c "export DATABASE_URL=postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@db:5432/$$POSTGRES_DB &&
+      export REDIS_URL=redis://redis:6379/0 &&
+      exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2"
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    container_name: horse-frontend
+    build:
+      context: ./Furlong-Frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked into the JS bundle at build time - edit this to match your
+        # server's actual public IP or domain before building on the server.
+        VITE_API_URL: http://YOUR_SERVER_IP_OR_DOMAIN:8000
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
