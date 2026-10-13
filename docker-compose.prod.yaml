@@ -30,7 +30,7 @@ services:
     # No --reload and no source bind-mount here - this image is immutable;
     # deploying a code change means rebuilding the image, not live-editing.
     command: >
-      sh -c "export DATABASE_URL=postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@db:5432/$$POSTGRES_DB &&
+      sh -c "export DATABASE_URL=postgresql+psycopg2://$$POSTGRES_USER:$$POSTGRES_PASSWORD@db:5432/$$POSTGRES_DB &&
       export REDIS_URL=redis://redis:6379/0 &&
       exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2"
     # Not published to the host - only the proxy should be internet-facing;

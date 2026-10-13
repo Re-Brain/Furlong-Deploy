@@ -41,7 +41,7 @@ services:
     # service names instead, so rebuild those two vars at container start
     # from the POSTGRES_* values env_file already loaded - no duplication.
     command: >
-      sh -c "export DATABASE_URL=postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@db:5432/$$POSTGRES_DB &&
+      sh -c "export DATABASE_URL=postgresql+psycopg2://$$POSTGRES_USER:$$POSTGRES_PASSWORD@db:5432/$$POSTGRES_DB &&
       export REDIS_URL=redis://redis:6379/0 &&
       exec uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
     ports:
